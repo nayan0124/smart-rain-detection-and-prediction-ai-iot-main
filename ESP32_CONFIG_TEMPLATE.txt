@@ -1,0 +1,340 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// ESP32 SENSOR CODE - CONFIGURATION TEMPLATE
+// ═══════════════════════════════════════════════════════════════════════════
+// 
+// This is a TEMPLATE showing all configurable parameters.
+// Copy the "CONFIGURATION" section into your ESP32_SENSOR_CODE.ino file
+// and fill in YOUR ACTUAL VALUES below.
+//
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ============================================================================
+// ✏️  STEP 1: FIND YOUR WIFI NETWORK NAME AND PASSWORD
+// ============================================================================
+//
+// Windows Command Prompt:
+//   ipconfig
+//   Look for "IPv4 Address" under your WiFi adapter (e.g., 192.168.1.x)
+//
+// Then:
+//   netsh wlan show interfaces
+//   Or open Settings → WiFi → Properties
+//
+
+// ============================================================================
+// ✏️  STEP 2: FIND YOUR BACKEND PC IP ADDRESS
+// ============================================================================
+//
+// In Command Prompt on the PC running Node.js backend:
+//   ipconfig
+//
+// Look for: "IPv4 Address" under your WiFi connection
+// Example output:
+//   Ethernet adapter Ethernet:
+//     IPv4 Address. . . . . . . . . . : 192.168.1.50
+//
+// This is your BACKEND_IP
+//
+
+// ============================================================================
+// ✏️  CONFIGURATION SECTION - EDIT THESE VALUES
+// ============================================================================
+
+#define WIFI_SSID "HomeNet"                    // ← YOUR WIFI NAME
+#define WIFI_PASSWORD "Pass123"                // ← YOUR WIFI PASSWORD
+
+#define BACKEND_IP "192.168.1.50"              // ← YOUR BACKEND PC IP
+#define BACKEND_PORT 4000                      // Standard port
+#define API_ENDPOINT "/api/v1/sensors/ingest"  // Don't change
+
+#define DEVICE_ID "esp32-rain-sensor-01"       // ← UNIQUE NAME FOR YOUR DEVICE
+#define API_KEY "test-api-key-12345"           // Optional device API key
+
+// ============================================================================
+// SENSOR READ INTERVALS (milliseconds)
+// ============================================================================
+
+#define SENSOR_READ_INTERVAL 5000              // Read sensors every 5 seconds
+#define DATA_SEND_INTERVAL 30000               // Send to backend every 30 seconds
+#define HEARTBEAT_INTERVAL 60000               // Keep-alive every 60 seconds
+
+// ============================================================================
+// RAIN ALERT THRESHOLD (customizable)
+// ============================================================================
+
+#define RAIN_THRESHOLD_ANALOG 600              // Analog value threshold (0-1023)
+#define RAIN_THRESHOLD_PROBABILITY 0.6         // AI probability threshold (0.0-1.0)
+
+// ============================================================================
+// PIN CONFIGURATION (Default - Do NOT change unless rewired!)
+// ============================================================================
+
+#define DHT_PIN 4                              // GPIO4 - DHT22 DATA
+#define DHT_TYPE DHT22                         // DHT type
+
+#define I2C_SDA 21                             // GPIO21 - I2C Data (BMP280)
+#define I2C_SCL 22                             // GPIO22 - I2C Clock (BMP280)
+
+#define RAIN_DIGITAL 35                        // GPIO35 - Rain detection digital
+#define RAIN_ANALOG 34                         // GPIO34 - Rain level analog (ADC0)
+
+#define SERVO_PIN 13                           // GPIO13 - Servo PWM control
+#define RELAY_PIN 12                           // GPIO12 - Relay module control
+
+#define LED_RED 2                              // GPIO2 - Error indicator
+#define LED_GREEN 5                            // GPIO5 - OK/Connected
+#define LED_YELLOW 18                          // GPIO18 - Busy/Sending
+
+// ============================================================================
+// EXAMPLE CONFIGURATIONS FOR DIFFERENT SCENARIOS
+// ============================================================================
+
+/*
+SCENARIO 1: Home Network Setup
+───────────────────────────────
+
+WiFi Router: "Airtel_WiFi"
+WiFi Password: "MyPassword123"
+Backend PC (running Node.js): 192.168.1.100
+
+Configuration:
+───────────────
+#define WIFI_SSID "Airtel_WiFi"
+#define WIFI_PASSWORD "MyPassword123"
+#define BACKEND_IP "192.168.1.100"
+
+*/
+
+/*
+SCENARIO 2: College Lab Network
+────────────────────────────────
+
+WiFi: "CollegeLab"
+Password: "Lab@2024"
+Backend Server: 192.168.0.50
+
+Configuration:
+───────────────
+#define WIFI_SSID "CollegeLab"
+#define WIFI_PASSWORD "Lab@2024"
+#define BACKEND_IP "192.168.0.50"
+
+*/
+
+/*
+SCENARIO 3: Hotspot from Phone
+───────────────────────────────
+
+Mobile Hotspot Name: "iPhone_Hotspot"
+Password: "12345678"
+PC Running Backend: 192.168.43.1
+
+Configuration:
+───────────────
+#define WIFI_SSID "iPhone_Hotspot"
+#define WIFI_PASSWORD "12345678"
+#define BACKEND_IP "192.168.43.100"  // Your PC's IP on that hotspot
+
+*/
+
+// ============================================================================
+// ACTUAL CODE SNIPPET (Copy this into ESP32_SENSOR_CODE.ino)
+// ============================================================================
+
+/*
+
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <DHT.h>
+#include <Adafruit_BMP280.h>
+#include <ArduinoJson.h>
+#include <Wire.h>
+#include <ESP32Servo.h>
+
+// PIN DEFINITIONS
+#define DHT_PIN 4
+#define DHT_TYPE DHT22
+#define I2C_SDA 21
+#define I2C_SCL 22
+#define RAIN_DIGITAL 35
+#define RAIN_ANALOG 34
+#define SERVO_PIN 13
+#define RELAY_PIN 12
+#define LED_RED 2
+#define LED_GREEN 5
+#define LED_YELLOW 18
+
+// *** CHANGE THESE VALUES TO YOUR SETUP ***
+
+const char* WIFI_SSID = "HomeNet";           // YOUR WIFI NAME
+const char* WIFI_PASSWORD = "Pass123";       // YOUR WIFI PASSWORD
+const char* BACKEND_IP = "192.168.1.50";     // YOUR BACKEND PC IP
+const int BACKEND_PORT = 4000;
+const char* DEVICE_ID = "esp32-rain-sensor-01";
+
+// *** END OF CONFIGURATION ***
+
+String backendURL;
+
+DHT dht(DHT_PIN, DHT_TYPE);
+Adafruit_BMP280 bmp280;
+Servo windowServo;
+
+void setup() {
+  Serial.begin(115200);
+  delay(1000);
+  
+  Serial.println("\n\n[System] Smart Rain Detection System Started");
+  Serial.println("[Config] Device ID: " + String(DEVICE_ID));
+  Serial.println("[Config] Backend URL: http://" + String(BACKEND_IP) + ":" + String(BACKEND_PORT));
+  
+  // Build backend URL
+  backendURL = "http://" + String(BACKEND_IP) + ":" + String(BACKEND_PORT) + "/api/v1";
+  
+  // Initialize pins
+  pinMode(LED_RED, OUTPUT);
+  pinMode(LED_GREEN, OUTPUT);
+  pinMode(LED_YELLOW, OUTPUT);
+  pinMode(RAIN_DIGITAL, INPUT);
+  
+  // Initialize sensors
+  dht.begin();
+  Wire.begin(I2C_SDA, I2C_SCL);
+  
+  if (!bmp280.begin(0x76)) {
+    Serial.println("[ERROR] BMP280 not found!");
+  }
+  
+  // Initialize servo
+  windowServo.attach(SERVO_PIN);
+  windowServo.write(0);  // Start position
+  
+  // WiFi connection
+  Serial.println("[WiFi] Connecting to " + String(WIFI_SSID) + "...");
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  
+  int attempts = 0;
+  while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+    delay(500);
+    Serial.print(".");
+    attempts++;
+  }
+  
+  if (WiFi.status() == WL_CONNECTED) {
+    digitalWrite(LED_GREEN, HIGH);
+    Serial.println("\n[WiFi] Connected! IP: " + WiFi.localIP().toString());
+  } else {
+    digitalWrite(LED_RED, HIGH);
+    Serial.println("\n[ERROR] WiFi connection failed!");
+  }
+}
+
+void loop() {
+  // Your main loop code here
+}
+
+*/
+
+// ============================================================================
+// DEBUGGING: HOW TO VERIFY YOUR CONFIGURATION
+// ============================================================================
+
+/*
+
+USE THE SERIAL MONITOR to verify everything is working:
+
+1. Open Serial Monitor in Arduino IDE (Tools → Serial Monitor)
+2. Set Baud Rate to 115200
+3. Press ESP32 RESET button
+4. Look for these messages:
+
+   ✅ GOOD OUTPUT:
+   ──────────────
+   [System] Smart Rain Detection System Started
+   [Config] Device ID: esp32-rain-sensor-01
+   [Config] Backend URL: http://192.168.1.50:4000
+   [WiFi] Connecting to HomeNet...
+   [WiFi] Connected! IP: 192.168.1.105
+   [SENSOR] Temperature: 25.5°C, Humidity: 65%
+   [SENSOR] Pressure: 1013.25 hPa
+   [SENSOR] Rain Level: 45%
+   
+   ❌ BAD OUTPUT:
+   ──────────────
+   [WiFi] Connecting to HomeNet...
+   [ERROR] WiFi connection failed!
+   
+   → Fix: Check WIFI_SSID and WIFI_PASSWORD spelling
+   
+   ❌ BAD OUTPUT:
+   ──────────────
+   [ERROR] BMP280 not found!
+   
+   → Fix: Check I2C SDA/SCL connections, verify address 0x76
+   
+   ❌ BAD OUTPUT:
+   ──────────────
+   [ERROR] DHT22 sensor failed!
+   
+   → Fix: Check GPIO 4 connection, pullup resistor
+
+*/
+
+// ============================================================================
+// QUICK REFERENCE: IP ADDRESS FORMATS
+// ============================================================================
+
+/*
+
+Common IP Address Ranges:
+
+Home Network:         192.168.1.x  or  192.168.0.x
+College Network:      10.x.x.x     or  172.16.x.x
+Mobile Hotspot:       192.168.43.x
+Linux/Mac Networks:   10.0.0.x
+
+To find your PC's IP on Windows:
+1. Open Command Prompt
+2. Type: ipconfig
+3. Find section matching your WiFi/Ethernet
+4. Look for "IPv4 Address"
+
+Example:
+─────────
+Windows IP Configuration
+
+Wireless LAN adapter WiFi:
+
+        Connection-specific DNS Suffix  . : 
+        IPv4 Address. . . . . . . . . . : 192.168.1.50      ← USE THIS
+        Subnet Mask . . . . . . . . . . : 255.255.255.0
+        Default Gateway . . . . . . . . : 192.168.1.1
+
+*/
+
+// ============================================================================
+// FINAL CHECKLIST BEFORE UPLOADING
+// ============================================================================
+
+/*
+
+Before you upload this to your ESP32:
+
+[ ] I have changed WIFI_SSID to my network name
+[ ] I have changed WIFI_PASSWORD to my network password
+[ ] I have changed BACKEND_IP to my backend PC's IP
+[ ] BACKEND_IP format is correct (e.g., "192.168.1.50", NOT "http://...")
+[ ] I have tested WiFi connection on my laptop (can connect)
+[ ] I have backend running (npm run dev in another terminal)
+[ ] I have installed all required libraries (DHT, BMP280, ArduinoJson, Servo)
+[ ] I have selected correct board (Tools → Board → ESP32 Dev Module)
+[ ] I have selected correct port (Tools → Port → COM3 or your COM port)
+[ ] I have set upload speed to 921600 (Tools → Upload Speed)
+
+Ready to upload! 🚀
+
+*/
+
+// ============================================================================
+// END OF CONFIGURATION TEMPLATE
+// ============================================================================

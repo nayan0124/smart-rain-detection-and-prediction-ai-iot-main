@@ -1,0 +1,223 @@
+# WIRING DIAGRAM - Visual Reference
+## Smart Rain AI IoT System Hardware
+
+```
+═══════════════════════════════════════════════════════════════════════════════
+                            ESP32 DEVKIT PIN MAP
+═══════════════════════════════════════════════════════════════════════════════
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                                                                              │
+│                          ╔════════════════════╗                              │
+│                          ║   ESP32 DEVKIT     ║                              │
+│                          ║    30 PIN VER      ║                              │
+│                          ╚════════════════════╝                              │
+│                                                                              │
+│  LEFT SIDE (Top to Bottom)               RIGHT SIDE (Top to Bottom)          │
+│  ═════════════════════════              ═════════════════════                │
+│  GND (BLACK RAIL)                        3V3 (RED RAIL)                      │
+│  EN                                      VUSB                                │
+│  36  [Rain Digital Input]   ←─────────→ D4   [DHT22 Data]                   │
+│  39                                      D2   [LED Red]                       │
+│  34  [Rain Analog Input]    ←─────────→ D5   [LED Green]                    │
+│  35  [Rain Digital2]                     D18  [LED Yellow]                   │
+│  D32                                     D19                                  │
+│  D33                                     D21  [BMP280 SDA]                   │
+│  D25                                     D22  [BMP280 SCL]                   │
+│  D26                                     D23                                  │
+│  D27                                     TX0 (D1)                             │
+│  D14                                     RX0 (D3)                             │
+│  D12 [Relay Control]        ←─────────→ D13  [Servo PWM]                    │
+│  D11                                     GND  (BLUE RAIL)                     │
+│  D10                                     VUSB                                 │
+│                                                                              │
+│  ╔════════════════════╗  5V/GND Rails (External Power)  ╔════════════════╗  │
+│  ║  BREADBOARD POWER  ║  ════════════════════════════   ║  DEVICE POWER  ║  │
+│  ║                    ║                                  ║                ║  │
+│  ║ RED   = 5V         ║  ← USB or External Power Supply  ║ 5V Power Bank  ║  │
+│  ║ BLACK = GND        ║  ← Both GND must be connected    ║ or Adapter     ║  │
+│  ║ BLUE  = GND (alt)  ║                                  ║                ║  │
+│  ╚════════════════════╝                                  ╚════════════════╝  │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+                            SENSOR CONNECTIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ DHT22 SENSOR (Temperature & Humidity)                                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Sensor Pinout:                  Breadboard Connection:                     │
+│  ═════════════                  ═══════════════════                         │
+│  VCC ──→ 3.3V (RED RAIL)         10K Resistor                              │
+│  │                               │                                         │
+│  DATA ──→ GPIO 4 (D4)            ├─→ 3V3                                   │
+│  │                               │                                         │
+│  GND ──→ GND (BLUE RAIL)         └─→ GPIO 4 (D4)                           │
+│                                                                             │
+│  Resistor: 10K pullup from VCC to 3.3V (critical!)                        │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ BMP280 SENSOR (Barometric Pressure) - I2C Connection                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  I2C Address: 0x76 or 0x77                                                 │
+│                                                                             │
+│  Sensor Pinout:              Breadboard Connection:                        │
+│  ═════════════               ═══════════════════                           │
+│  VCC ──→ 3.3V (RED RAIL)    Both need 10K pullup (usually on module)       │
+│  GND ──→ GND (BLUE RAIL)                                                   │
+│  SDA ──→ GPIO 21 (D21)      SDA ──→ 10K ──→ 3.3V                          │
+│  SCL ──→ GPIO 22 (D22)      SCL ──→ 10K ──→ 3.3V                          │
+│                                                                             │
+│  Note: SDA = Serial Data, SCL = Serial Clock                              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ RAIN SENSOR (Capacitive/Resistive - Analog + Digital)                      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Sensor Pinout:              Breadboard Connection:                        │
+│  ═════════════               ═══════════════════                           │
+│  VCC ──→ 5V (RED RAIL)       (Connect VCC to 5V OR 3.3V)                  │
+│  GND ──→ GND (BLUE RAIL)                                                   │
+│  AOUT ──→ GPIO 34 (A0)       Analog Input (0-4095)                        │
+│  DOUT ──→ GPIO 35 (D35)      Digital Input (0 or 1)                       │
+│                                                                             │
+│  ⚠️  IMPORTANT: If using 5V sensor with 3.3V ESP32:                       │
+│       Use voltage divider: 5V ──[10K]──┬──[10K]── GND                     │
+│                                        └── GPIO 34                         │
+│                                        (midpoint = ~2.5V safe)             │
+│                                                                             │
+│  Rainfall Levels (Typical):                                                │
+│  ├─ 0-200:   Dry (no rain)                                                │
+│  ├─ 200-500: Light drizzle                                                │
+│  ├─ 500-800: Moderate rain                                                │
+│  └─ 800+:    Heavy rain                                                   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ STATUS INDICATOR LEDs (Visual Feedback)                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  All LEDs follow same pattern:                                             │
+│  ├─ Anode (+) ──→ GPIO Pin                                                │
+│  └─ Cathode (-) ──→ 220Ω Resistor ──→ GND                                 │
+│                                                                             │
+│  ╔═══════════════╦═════════════╦═══════════════════╗                       │
+│  ║ LED Color     ║ GPIO Pin    ║ Status Meaning    ║                       │
+│  ╠═══════════════╬═════════════╬═══════════════════╣                       │
+│  ║ GREEN (OK)    ║ GPIO 5 (D5) ║ WiFi connected,   ║                       │
+│  ║               ║             ║ sensors OK        ║                       │
+│  ╠═══════════════╬═════════════╬═══════════════════╣                       │
+│  ║ YELLOW (Busy) ║ GPIO 18     ║ Sending data      ║                       │
+│  ║ (Optional)    ║ (D18)       ║ to backend        ║                       │
+│  ╠═══════════════╬═════════════╬═══════════════════╣                       │
+│  ║ RED (Error)   ║ GPIO 2 (D2) ║ WiFi failed or    ║                       │
+│  ║               ║             ║ sensor error      ║                       │
+│  ╚═══════════════╩═════════════╩═══════════════════╝                       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ SERVO MOTOR (Window/Roof Automation)                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Servo Connector (Standard 3-pin):                                         │
+│  ═════════════════════════════════                                         │
+│  RED ──→ 5V (Power)                                                        │
+│  BLACK ──→ GND                                                             │
+│  YELLOW/ORANGE ──→ GPIO 13 (D13) [PWM Control]                           │
+│                                                                             │
+│  Control Values:                                                           │
+│  ├─ 0° → servo.write(0);    [Window OPEN]                                 │
+│  ├─ 45° → servo.write(45);  [Partially open]                             │
+│  ├─ 90° → servo.write(90);  [Window CLOSED - rain mode]                  │
+│  └─ 180° → servo.write(180); [Maximum extension]                         │
+│                                                                             │
+│  Recommended: Mount servo on window latch for 90° rotation                 │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ RELAY MODULE (Irrigation Control)                                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Relay Module Pinout (4-pin):                                              │
+│  ════════════════════════════                                              │
+│  VCC ──→ 5V (Logic power)                                                  │
+│  GND ──→ GND                                                               │
+│  IN ──→ GPIO 12 (D12) [Control pin]                                       │
+│  COM ──→ Pump/Load Common                                                 │
+│  NO ──→ Pump/Load Positive                                                │
+│  NC ──→ Normally Closed (not used in rain mode)                           │
+│                                                                             │
+│  Wiring Diagram:                                                           │
+│  ═════════════════                                                         │
+│                                                                             │
+│   Power Supply (12V)                                                       │
+│        │                                                                   │
+│        ├──→ [PUMP] ──→ LOAD RETURN ──→ GND                                │
+│        │                                                                   │
+│        └──→ [NO contact of relay] ──→ PUMP SIGNAL                         │
+│                                                                             │
+│   GPIO 12 (HIGH) = Relay ON = Pump RUNS                                   │
+│   GPIO 12 (LOW)  = Relay OFF = Pump STOPS                                 │
+│                                                                             │
+│  ⚠️  SAFETY: Keep HIGH voltage (pump supply) separate from control logic! │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+                            POWER DISTRIBUTION
+═══════════════════════════════════════════════════════════════════════════════
+
+Option A: USB Power (Development)
+─────────────────────────────────
+    USB Adapter (5V, 2A)
+          │
+          ├─ ESP32 Micro USB Port
+          └─ Breadboard 5V Rail for sensors/servo
+
+Option B: External Power Supply (Recommended)
+──────────────────────────────────────────────
+    5V Power Bank (5V, 2A+)
+          │
+          ├─ Breadboard RED Rail (5V)
+          ├─ Breadboard BLUE Rail (GND)
+          └─ Add 10µF capacitor across power for stability
+
+Option C: Dual Power (High Power Devices)
+──────────────────────────────────────────
+    USB (5V, 1A) ──→ ESP32 + Sensors (logic)
+    12V Supply (5A) ──→ Pump/Relay (high current)
+    
+    ⚠️  CRITICAL: Connect GND of both supplies together!
+
+═══════════════════════════════════════════════════════════════════════════════
+                            COMPLETE ASSEMBLY
+═══════════════════════════════════════════════════════════════════════════════
+
+Step-by-step assembly order:
+
+1. Mount ESP32 on breadboard center
+2. Connect power rails (GND, 5V, 3.3V)
+3. Add DHT22 with pullup resistor
+4. Add BMP280 I2C with pullups
+5. Add Rain sensor (analog + digital)
+6. Add status LEDs with 220Ω resistors
+7. Add Servo motor (separate 5V)
+8. Add Relay module (separate 5V for pump)
+9. Connect USB power for testing
+10. Load ESP32_SENSOR_CODE.ino
+
+═══════════════════════════════════════════════════════════════════════════════
+```
+
+**Print this reference card and keep it near your workbench!** 📋
